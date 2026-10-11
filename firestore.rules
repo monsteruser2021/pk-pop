@@ -1,0 +1,64 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function isAdmin() {
+      return request.auth != null
+        && request.auth.token.email == "monsteruser2021@gmail.com";
+    }
+
+    function isValidProduct() {
+      return request.resource.data.keys().hasAll([
+          "name",
+          "description",
+          "category",
+          "imageUrls",
+          "priceUnit",
+          "priceDozen",
+          "price100",
+          "price1000",
+          "isActive",
+          "isDeleted"
+        ])
+        && request.resource.data.keys().hasOnly([
+          "name",
+          "description",
+          "category",
+          "imageUrls",
+          "priceUnit",
+          "priceDozen",
+          "price100",
+          "price1000",
+          "isActive",
+          "isDeleted"
+        ])
+        && request.resource.data.name is string
+        && request.resource.data.name.size() > 0
+        && request.resource.data.description is string
+        && request.resource.data.category is string
+        && request.resource.data.imageUrls is list
+        && request.resource.data.imageUrls.size() > 0
+        && request.resource.data.priceUnit is number
+        && request.resource.data.priceUnit >= 0
+        && request.resource.data.priceDozen is number
+        && request.resource.data.priceDozen >= 0
+        && request.resource.data.price100 is number
+        && request.resource.data.price100 >= 0
+        && request.resource.data.price1000 is number
+        && request.resource.data.price1000 >= 0
+        && request.resource.data.isActive is bool
+        && request.resource.data.isDeleted is bool;
+    }
+
+    match /products/{productId} {
+      allow read: if isAdmin()
+        || (
+          resource.data.keys().hasAll(["isActive", "isDeleted"])
+          && resource.data.isActive == true
+          && resource.data.isDeleted == false
+        );
+      allow delete: if isAdmin();
+      allow create, update: if isAdmin() && isValidProduct();
+    }
+  }
+}
